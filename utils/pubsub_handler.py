@@ -81,7 +81,7 @@ class DataFlow:
         self.timeout = 5.0
         self.BUCKET = bucket
         self.REGION = region
-        self.count = 1
+        self.count = 0
         self.output_path = "gs://"+self.BUCKET+"/results/outputs"
         self.pipeline_topic_id = 'projects/'+self.project_id+'/topics/'+self.topic_id
 
@@ -92,7 +92,7 @@ class DataFlow:
             runner='DataflowRunner', temp_location="gs://" + self.BUCKET + "/temp", project=self.project_id, region=self.REGION,
             streaming=True, save_main_session=True
         )
-
+        print('self.output_path',self.output_path)
         with beam.Pipeline(options=pipeline_options) as pipeline:
             (
                     pipeline
@@ -103,17 +103,15 @@ class DataFlow:
             )
 
     def send_data(self, lsl_data_type,stream_data,timestamps):
-
         publisher = pubsub_v1.PublisherClient()
         # The `topic_path` method creates a fully qualified identifier
         # in the form `projects/{project_id}/topics/{topic_id}`
         topic_path = publisher.topic_path(self.project_id, self.topic_id)
-        print('stream_data',stream_data)
-        if self.count < 10:
-            data = "Message number " + str(self.count) + ": " + json.dumps(stream_data.tolist())
-            self.count += 1
-            # Data must be a bytestring
-            data = data.encode("utf-8")
-            # When you publish a message, the client returns a future.
-            future = publisher.publish(topic_path, data)
-            print(future.result())
+        #if self.count < 10:
+        data = "Message number " + str(self.count) + "; Data type " + lsl_data_type + ": " + \
+               json.dumps(stream_data.tolist()) + '; Timestamps: ' + json.dumps(timestamps)
+        self.count += 1
+        # Data must be a bytestring
+        data = data.encode("utf-8")
+        # When you publish a message, the client returns a future.
+        future = publisher.publish(topic_path, data)

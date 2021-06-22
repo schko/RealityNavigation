@@ -8,9 +8,9 @@ from apache_beam.options.pipeline_options import PipelineOptions
 import apache_beam.transforms.window as window
 import os
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="C:/Users/Munna/Documents/Github/RealityNavigation/auth/Sharath's Project-a05c51bd881f.json"
-PROJECT='serene-athlete-271523'
-BUCKET='dataflow-eeg'
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="C:/Users/LIINC/OneDrive/Documents/Sharath/RealityNavigation/auth/vae-cloud-model-cfe6512aaa99.json"
+PROJECT='vae-cloud-model'
+BUCKET='raw-model-data'
 REGION='us-central1'
 topic_id = 'test_topic'
 
@@ -120,5 +120,4 @@ if __name__ == "__main__":  # noqa
         known_args.input_topic,
         known_args.output_path,
         known_args.window_size,
-        pipeline_args,
     )

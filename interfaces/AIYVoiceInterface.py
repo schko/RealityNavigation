@@ -1,7 +1,7 @@
 import time
 import numpy as np
 
-from pylsl import StreamInlet, resolve_stream, LostError, resolve_byprop
+from pylsl import StreamInlet, resolve_stream, LostError, resolve_byprop,StreamInfo,StreamOutlet
 
 import config
 
@@ -16,6 +16,9 @@ class AIYVoiceInterface:
         if len(self.streams) < 1:
             raise AttributeError('Unable to find LSL Stream with given type {0}'.format(lsl_data_type))
         self.inlet = StreamInlet(self.streams[0])
+        # TO-DO: fix this, we need to re-stream this since sometimes unity doesn't pick up AIY data for some reason
+        info = StreamInfo('VoiceBox', 'Voice', num_channels, 0.0, 'string', 'voice')
+        self.outlet = StreamOutlet(info)
         pass
 
     def start_sensor(self):
@@ -34,6 +37,8 @@ class AIYVoiceInterface:
         # return one or more frames of the sensor
         try:
             frames, timestamps = self.inlet.pull_chunk()
+            if len(frames)>0:
+                self.outlet.push_sample(frames[0]) # TO-DO: see above
         except LostError:
             frames, timestamps = [], []
             pass  # TODO handle stream lost

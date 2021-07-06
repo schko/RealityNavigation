@@ -507,11 +507,13 @@ class MainWindow(QtWidgets.QMainWindow):
                                - samples_to_plot:]  # plot the most recent 10 seconds
 
             # main window only retains the most recent 10 seconds for visualization purposes
+            if '<U' in str(data_dict['frames'].dtype): # if we're dealing with unicode string outputs
+                data_to_plot[-1][-1] = float(data_to_plot[-1][-2])+1
+                data_to_plot = np.array([np.array(list(map(float, sublist))) for sublist in data_to_plot])
             self.LSL_data_buffer_dicts[data_dict['lsl_data_type']] = data_to_plot
             self.lslStream_presets_dict[data_dict['lsl_data_type']]["ActualSamplingRate"] = data_dict['sampling_rate']
             # notify the internal buffer in recordings tab
             self.recordingTab.update_buffers(data_dict)
-
             # notify the internal buffer in cloud tab
             self.cloudTab.update_buffers(data_dict)
 

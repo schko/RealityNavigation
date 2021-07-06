@@ -57,6 +57,8 @@ def load_LSL_preset(preset_dict):
         preset_dict['PlotGroupSlices'] = None
     if 'NominalSamplingRate' not in preset_dict.keys():
         preset_dict['NominalSamplingRate'] = None
+    if 'Format' not in preset_dict.keys():
+        preset_dict['Format'] = None
     return preset_dict
 
 

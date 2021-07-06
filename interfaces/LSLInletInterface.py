@@ -1,10 +1,10 @@
 import time
 import numpy as np
 
-from pylsl import StreamInlet, resolve_stream, LostError, resolve_byprop
+from pylsl import StreamInlet, StreamInfo, resolve_stream, LostError, resolve_byprop
 
 import config
-
+import uuid
 
 class LSLInletInterface:
 
@@ -13,7 +13,6 @@ class LSLInletInterface:
         if len(self.streams) < 1:
             raise AttributeError('Unable to find LSL Stream with given type {0}'.format(lsl_data_type))
         self.inlet = StreamInlet(self.streams[0])
-
         self.lsl_data_type = lsl_data_type
         self.lsl_num_channels = self.inlet.channel_count
         pass
@@ -23,7 +22,8 @@ class LSLInletInterface:
         self.streams = resolve_byprop('name', self.lsl_data_type, timeout=0.1)
         if len(self.streams) < 1:
             raise AttributeError('Unable to find LSL Stream with given type {0}'.format(self.lsl_data_type))
-        self.inlet = StreamInlet(self.streams[0])
+        if not self.inlet:
+            self.inlet = StreamInlet(self.streams[0])
         self.inlet.open_stream()
         print('LSLInletInterface: resolved, created and opened inlet for lsl stream with type ' + self.lsl_data_type)
 

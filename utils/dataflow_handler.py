@@ -20,17 +20,17 @@ class GroupWindowsIntoBatches(beam.PTransform):
     and its publish timestamp.
     """
 
-    def __init__(self, window_size):
-        # Convert minutes into seconds.
-        self.window_size = int(window_size * 60)
+    def __init__(self, gap_size):
+        # Convert seconds into float.
+        self.gap_size = float(gap_size)
 
     def expand(self, pcoll):
         return (
             pcoll
             # Assigns window info to each Pub/Sub message based on its
             # publish timestamp.
-            | "Window into Fixed Intervals"
-            >> beam.WindowInto(window.FixedWindows(self.window_size))
+            | "Window into Sessions"
+            >> beam.WindowInto(window.Sessions(self.gap_size))
             | "Add timestamps to messages" >> beam.ParDo(AddTimestamps())
             # Use a dummy key to group the elements in the same window.
             # Note that all the elements in one window must fit into memory
@@ -66,9 +66,9 @@ class WriteBatchesToGCS(beam.DoFn):
     def process(self, batch, window=beam.DoFn.WindowParam):
         """Write one batch per file to a Google Cloud Storage bucket. """
 
-        ts_format = "%H:%M"
-        window_start = window.start.to_utc_datetime().strftime(ts_format)
-        window_end = window.end.to_utc_datetime().strftime(ts_format)
+        ts_format = "%Y-%m-%d %H:%M:%S.%f"
+        window_start = window.start.strftime(ts_format)
+        window_end = window.end.strftime(ts_format)
         filename = "-".join([self.output_path, window_start, window_end])
 
         with beam.io.gcp.gcsio.GcsIO().open(filename=filename, mode="w") as f:
@@ -76,7 +76,7 @@ class WriteBatchesToGCS(beam.DoFn):
                 f.write("{}\n".format(json.dumps(element)).encode("utf-8"))
 
 
-def run(input_topic, output_path, window_size=1.0):
+def run(input_topic, output_path, gap_size=0.5):
     # `save_main_session` is set to true because some DoFn's rely on
     # globally imported modules.
     pipeline_options = PipelineOptions(
@@ -88,7 +88,7 @@ def run(input_topic, output_path, window_size=1.0):
             pipeline
             | "Read PubSub Messages"
             >> beam.io.ReadFromPubSub(topic=input_topic)
-            | "Window into" >> GroupWindowsIntoBatches(window_size)
+            | "Window into" >> GroupWindowsIntoBatches(gap_size)
             | "Write to GCS" >> beam.ParDo(WriteBatchesToGCS(output_path))
         )
 

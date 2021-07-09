@@ -28,6 +28,7 @@ class CloudTab(QtWidgets.QWidget):
         self.StopRecordingBtn.setEnabled(False)
         self.parent = parent
         self.dataflow = None
+        self.sentData = False
 
     def start_pipeline_btn_pressed(self):
         if not self.dataflow:
@@ -63,10 +64,14 @@ class CloudTab(QtWidgets.QWidget):
 
     def update_buffers(self, data_dict: dict):
         if self.is_recording:
+            self.sentData = True
             lsl_data_type = data_dict['lsl_data_type']  # what is the type of the newly-come data
             buffered_data = data_dict['frames']
             buffered_timestamps = data_dict['timestamps']
             self.dataflow.send_data(lsl_data_type=lsl_data_type, stream_data=buffered_data,
                                     timestamps=buffered_timestamps)
-
+            pass
+        elif self.sentData and not self.is_recording:
+            print('stopped streaming at', data_dict['timestamps'])
+            self.sentData = False
             pass

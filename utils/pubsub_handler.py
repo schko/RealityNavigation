@@ -20,22 +20,6 @@ class DataFlow:
         self.output_path = "gs://"+self.BUCKET+"/results/outputs"
         self.pipeline_topic_id = 'projects/'+self.project_id+'/topics/'+self.topic_id
 
-    def start_pipeline(self, gap_size=0.5):
-        # `save_main_session` is set to true because some DoFn's rely on
-        # globally imported modules.
-        pipeline_options = PipelineOptions(
-            runner='DataflowRunner', temp_location="gs://" + self.BUCKET + "/temp", project=self.project_id, region=self.REGION,
-            streaming=True, save_main_session=True
-        )
-        print('self.output_path',self.output_path)
-        with beam.Pipeline(options=pipeline_options) as pipeline:
-            (
-                    pipeline
-                    | "Read PubSub Messages"
-                    >> beam.io.ReadFromPubSub(topic=self.pipeline_topic_id)
-                    | "Window into" >> GroupWindowsIntoBatches(gap_size)
-                    | "Write to GCS" >> beam.ParDo(WriteBatchesToGCS(self.output_path))
-            )
 
     def send_data(self, lsl_data_type,stream_data,timestamps):
         publisher = pubsub_v1.PublisherClient()

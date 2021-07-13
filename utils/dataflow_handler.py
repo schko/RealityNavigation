@@ -8,12 +8,6 @@ from apache_beam.options.pipeline_options import PipelineOptions
 import apache_beam.transforms.window as window
 import os
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="C:/Users/LIINC/OneDrive/Documents/Sharath/RealityNavigation/auth/vae-cloud-model-cfe6512aaa99.json"
-PROJECT='vae-cloud-model'
-BUCKET='raw-model-data'
-REGION='us-central1'
-topic_id = 'test_topic'
-
 class GroupWindowsIntoBatches(beam.PTransform):
     """A composite transform that groups Pub/Sub messages based on publish
     time and outputs a list of dictionaries, where each contains one message
@@ -67,8 +61,8 @@ class WriteBatchesToGCS(beam.DoFn):
         """Write one batch per file to a Google Cloud Storage bucket. """
 
         ts_format = "%Y-%m-%d %H:%M:%S.%f"
-        window_start = window.start.strftime(ts_format)
-        window_end = window.end.strftime(ts_format)
+        window_start = window.start.to_utc_datetime().strftime(ts_format)
+        window_end = window.end.to_utc_datetime().strftime(ts_format)
         filename = "-".join([self.output_path, window_start, window_end])
 
         with beam.io.gcp.gcsio.GcsIO().open(filename=filename, mode="w") as f:
@@ -76,11 +70,11 @@ class WriteBatchesToGCS(beam.DoFn):
                 f.write("{}\n".format(json.dumps(element)).encode("utf-8"))
 
 
-def run(input_topic, output_path, gap_size=0.5):
+def run(input_topic, output_path, bucket, project, region, gap_size=0.5):
     # `save_main_session` is set to true because some DoFn's rely on
     # globally imported modules.
     pipeline_options = PipelineOptions(
-        runner='DataflowRunner',temp_location="gs://"+BUCKET+"/temp", project=PROJECT, region=REGION, streaming=True, save_main_session=True
+        runner='DataflowRunner',temp_location="gs://"+bucket+"/temp", project=project, region=region, streaming=True, save_main_session=True
     )
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -98,26 +92,53 @@ if __name__ == "__main__":  # noqa
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-      '--input_topic',
-      dest='input_topic',
-      default='projects/'+PROJECT+'/topics/'+topic_id,
-      help="The Cloud Pub/Sub topic to read from.\n"
-        '"projects/<PROJECT_NAME>/topics/<TOPIC_NAME>".')
+        "--project",
+        type=str,
+        default='vae-cloud-model',
+        help="Project name.",
+    )
     parser.add_argument(
-      '--output_path',
-      dest='output_path',
-      default="gs://"+BUCKET+"/results/outputs",
-      help="GCS Path of the output file including filename prefix.")
+        "--bucket",
+        type=str,
+        default='raw-model-data',
+        help="Storage bucket.",
+    )
     parser.add_argument(
-        "--window_size",
+        "--region",
+        type=str,
+        default='us-central1',
+        help="GCP Region.",
+    )
+    parser.add_argument(
+        "--topic_id",
+        type=str,
+        default='test_topic',
+        help="PubSub topic."
+    )
+    parser.add_argument(
+        "--gap_size",
         type=float,
-        default=1.0,
+        default=0.5,
         help="Output file's window size in number of minutes.",
+    )
+    parser.add_argument(
+        "--auth_path",
+        type=str,
+        default="C:/Users/LIINC/OneDrive/Documents/Sharath/RealityNavigation/auth/vae-cloud-model-cfe6512aaa99.json",
+        help="Auth file path.",
     )
     known_args, pipeline_args = parser.parse_known_args()
 
+    os.environ[
+        "GOOGLE_APPLICATION_CREDENTIALS"] = known_args.auth_path
+
+    input_topic = 'projects/' + known_args.project + '/topics/' + known_args.topic_id
+    output_path = "gs://" + known_args.bucket + "/results/outputs"
     run(
-        known_args.input_topic,
-        known_args.output_path,
-        known_args.window_size,
+        input_topic = input_topic,
+        output_path = output_path,
+        gap_size = known_args.gap_size,
+        bucket = known_args.bucket,
+        project = known_args.project,
+        region = known_args.region
     )
